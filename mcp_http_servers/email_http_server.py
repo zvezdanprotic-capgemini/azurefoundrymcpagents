@@ -25,7 +25,7 @@ async def health_check(request):
     from starlette.responses import JSONResponse
     return JSONResponse({
         "service": "Email MCP Server",
-        "status": "healthy",
+        "status": "ok",
         "port": 8003
     })
 

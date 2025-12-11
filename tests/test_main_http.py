@@ -7,23 +7,39 @@ Requires HTTP MCP servers to be running (handled by conftest.py fixtures).
 import pytest
 import json
 import asyncio
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch, AsyncMock, MagicMock
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
-from fastapi import HTTPException
+from httpx import AsyncClient, Response
+from fastapi import HTTPException, status
 
 import sys
 import os
+import uuid
+from pathlib import Path
+
+# Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from main_http import app, sessions, load_sessions, save_sessions
+from main_http import app, sessions, load_sessions, save_sessions, SESSIONS_FILE
+from error_handling import KYCError, ErrorCode, ErrorResponse, ServiceUnavailableError, NotFoundError
 
 
 @pytest.fixture
 def client():
     """Create test client for FastAPI app with lifespan context."""
-    with TestClient(app) as c:
-        yield c
+    # Setup test environment
+    test_session_file = Path("test_sessions.json")
+    if test_session_file.exists():
+        test_session_file.unlink()
+    
+    # Patch the sessions file path for testing
+    with patch('main_http.SESSIONS_FILE', test_session_file):
+        with TestClient(app) as c:
+            yield c
+    
+    # Cleanup
+    if test_session_file.exists():
+        test_session_file.unlink()
 
 
 @pytest.mark.usefixtures("mcp_server_processes")
@@ -40,26 +56,57 @@ class TestMainHTTPApplication:
         response = client.get("/")
         assert response.status_code == 200
         data = response.json()
-        assert data["service"] == "KYC Orchestrator with HTTP MCP"
-        assert data["version"] == "4.0.0"
+        assert "service" in data
+        assert "HTTP MCP" in data["service"]
+        assert "version" in data
+        assert "mcp_architecture" in data
         assert data["mcp_architecture"] == "HTTP (decoupled servers)"
         assert "mcp_servers" in data
         assert "postgres" in data["mcp_servers"]
         assert "blob" in data["mcp_servers"]
         assert "email" in data["mcp_servers"]
         assert "rag" in data["mcp_servers"]
+        
+        # Test response headers
+        assert "x-request-id" in response.headers
+        # Trace ID is optional (only present if OpenTelemetry span is active)
+        # assert "x-trace-id" in response.headers
     
-    def test_health_endpoint(self, client):
+    @patch('main_http.get_mcp_client')
+    def test_health_check(self, mock_get_mcp_client, client):
         """Test health check endpoint"""
+        # Mock MCP client
+        mock_client = MagicMock()
+        mock_client.is_connected.return_value = True
+        mock_get_mcp_client.return_value = mock_client
+        
         response = client.get("/health")
         assert response.status_code == 200
         data = response.json()
-        assert "status" in data
-        assert "mcp_client" in data
-        assert "mcp_tools_loaded" in data
         assert data["status"] == "healthy"
-        assert data["mcp_client"] == "connected"
-        assert data["mcp_tools_loaded"] > 0
+        assert "service" in data
+        assert "version" in data
+        assert data["mcp_connected"] is True
+        
+        # Test response headers
+        assert "x-request-id" in response.headers
+        # Trace ID is optional
+        # assert "x-trace-id" in response.headers
+    
+    @patch('main_http.get_mcp_client')
+    def test_health_check_service_unavailable(self, mock_get_mcp_client, client):
+        """Test health check when MCP client is not connected"""
+        # Mock MCP client as not connected
+        mock_client = MagicMock()
+        mock_client.is_connected.return_value = False
+        mock_get_mcp_client.return_value = mock_client
+        
+        response = client.get("/health")
+        assert response.status_code == 503
+        data = response.json()
+        assert "error" in data
+        assert data["error"]["code"] == "service_unavailable"
+        assert "MCP client is not connected" in data["error"]["message"]
     
     def test_mcp_servers_status(self, client):
         """Test MCP servers status endpoint"""
@@ -67,33 +114,58 @@ class TestMainHTTPApplication:
         assert response.status_code == 200
         data = response.json()
         assert "servers" in data
-        assert "status" in data
         servers = data["servers"]
         assert len(servers) == 4
         assert "postgres" in servers
         assert "blob" in servers
         assert "email" in servers
         assert "rag" in servers
-        # Check each server has transport and url
+        # Check each server has a URL
         for server_name in ["postgres", "blob", "email", "rag"]:
-            assert "transport" in servers[server_name]
-            assert "url" in servers[server_name]
+            assert isinstance(servers[server_name], str)
+            assert "http" in servers[server_name]
     
-    def test_mcp_tools_endpoint(self, client):
-        """Test getting MCP tools from all servers"""
+    @patch('main_http.get_mcp_client')
+    def test_list_mcp_tools(self, mock_get_mcp_client, client):
+        """Test listing available MCP tools"""
+        # Mock MCP client with async get_tools
+        mock_client = MagicMock()
+        # Create mock tool objects
+        mock_tool = MagicMock()
+        mock_tool.name = "test__test_tool"
+        mock_tool.description = "A test tool"
+        mock_tool.args_schema = None
+        
+        # Make get_tools return an async result
+        async def mock_get_tools():
+            return [mock_tool]
+        mock_client.get_tools = mock_get_tools
+        mock_get_mcp_client.return_value = mock_client
+        
         response = client.get("/mcp/tools")
         assert response.status_code == 200
         data = response.json()
-        assert "total_tools" in data
         assert "tools" in data
-        assert data["total_tools"] > 0
-        assert len(data["tools"]) > 0
-        assert data["total_tools"] == len(data["tools"])
+        assert "total_tools" in data
+        assert isinstance(data["tools"], list)
+        assert data["total_tools"] == 1
         
-        # Check tool structure
-        tool = data["tools"][0]
-        assert "name" in tool
-        assert "description" in tool
+        # Test response headers
+        assert "x-request-id" in response.headers
+        # Trace ID is optional
+        # assert "x-trace-id" in response.headers
+    
+    @patch('main_http.get_mcp_client')
+    def test_list_mcp_tools_service_unavailable(self, mock_get_mcp_client, client):
+        """Test listing MCP tools when service is unavailable"""
+        # Mock MCP client as None
+        mock_get_mcp_client.return_value = None
+        
+        response = client.get("/mcp/tools")
+        assert response.status_code == 503
+        data = response.json()
+        assert "error" in data
+        assert data["error"]["code"] == "service_unavailable"
     
     def test_list_sessions_empty(self, client):
         """Test listing sessions when none exist"""

@@ -34,7 +34,7 @@ async def health_check(request):
     from starlette.responses import JSONResponse
     return JSONResponse({
         "service": "Azure Blob MCP Server",
-        "status": "healthy",
+            "status": "ok",
         "port": 8002
     })
 
