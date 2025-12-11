@@ -8,10 +8,10 @@ Collects essential customer information through conversation:
 """
 
 from typing import Dict, Any
-from agents.base import BaseKYCAgent
+from agents.base_http import BaseKYCAgentHTTP
 
 
-class IntakeAgent(BaseKYCAgent):
+class IntakeAgent(BaseKYCAgentHTTP):
     """Customer Intake Agent for the KYC workflow."""
     
     @property

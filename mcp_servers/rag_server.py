@@ -18,6 +18,7 @@ import asyncpg
 from langchain_openai import AzureOpenAIEmbeddings
 
 from mcp_servers.base import BaseMCPServer, ToolResult, get_env_or_default
+from mcp_servers.http_app import create_mcp_http_app
 
 logger = logging.getLogger("mcp_servers.rag")
 
@@ -355,6 +356,10 @@ class RAGMCPServer(BaseMCPServer):
         """Close the connection pool."""
         if self._pool:
             await self._pool.close()
+
+
+# FastAPI app exposing HTTP MCP endpoints (defined after class)
+app = create_mcp_http_app(RAGMCPServer())
 
 
 # Utility function for document ingestion (used by admin endpoint)

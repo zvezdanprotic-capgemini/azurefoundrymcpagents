@@ -10,10 +10,10 @@ Assesses customer eligibility for insurance products:
 """
 
 from typing import Dict, Any
-from agents.base import BaseKYCAgent
+from agents.base_http import BaseKYCAgentHTTP
 
 
-class EligibilityAgent(BaseKYCAgent):
+class EligibilityAgent(BaseKYCAgentHTTP):
     """Eligibility Assessment Agent for the KYC workflow."""
     
     @property

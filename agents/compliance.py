@@ -9,10 +9,10 @@ Performs regulatory compliance verification:
 """
 
 from typing import Dict, Any
-from agents.base import BaseKYCAgent
+from agents.base_http import BaseKYCAgentHTTP
 
 
-class ComplianceAgent(BaseKYCAgent):
+class ComplianceAgent(BaseKYCAgentHTTP):
     """Regulatory Compliance Agent for the KYC workflow."""
     
     @property

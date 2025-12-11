@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 import asyncpg
+from mcp_servers.http_app import create_mcp_http_app
 
 from mcp_servers.base import BaseMCPServer, ToolResult, get_env_or_default
 
@@ -31,6 +32,7 @@ class PostgresMCPServer(BaseMCPServer):
         """
         super().__init__()
         self._pool = pool
+    # (removed stray import inside class)
     
     @property
     def name(self) -> str:
@@ -163,7 +165,7 @@ class PostgresMCPServer(BaseMCPServer):
         except Exception as e:
             logger.error(f"Error executing tool {tool_name}: {e}")
             return ToolResult(success=False, error=str(e))
-    
+
     async def _get_customer_by_email(self, email: str) -> ToolResult:
         """Look up customer by email."""
         pool = await self._get_pool()
@@ -362,3 +364,6 @@ class PostgresMCPServer(BaseMCPServer):
         """Close the connection pool."""
         if self._pool:
             await self._pool.close()
+
+# FastAPI app exposing HTTP MCP endpoints (defined after class)
+app = create_mcp_http_app(PostgresMCPServer())

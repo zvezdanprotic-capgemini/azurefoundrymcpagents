@@ -130,7 +130,7 @@ def create_agent_node(step_name: str):
                 latest_message = msg.content
                 break
         
-        # Get the agent class from registry and instantiate with MCP servers
+        # Get the agent class from registry and instantiate
         agent_class = AGENT_REGISTRY.get(step_name)
         if not agent_class:
             logger.error(f"No agent registered for step: {step_name}")
@@ -139,8 +139,12 @@ def create_agent_node(step_name: str):
                 "final_response": f"Error: No agent available for step {step_name}"
             }
         
-        # Create agent with MCP servers injected
-        agent = agent_class(mcp_servers=_mcp_servers)
+        # Create agent - if using HTTP MCP, agents get tools from HTTP client automatically
+        # If using embedded MCP, pass servers to agent
+        if _mcp_servers:
+            agent = agent_class(mcp_servers=_mcp_servers)
+        else:
+            agent = agent_class()
         
         # Call the local agent (now with agentic tool-calling capability)
         result = await agent.invoke(

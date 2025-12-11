@@ -10,10 +10,10 @@ Evaluates identity verification status based on information from the insurance a
 """
 
 from typing import Dict, Any
-from agents.base import BaseKYCAgent
+from agents.base_http import BaseKYCAgentHTTP
 
 
-class VerificationAgent(BaseKYCAgent):
+class VerificationAgent(BaseKYCAgentHTTP):
     """Identity Verification Agent for the KYC workflow."""
     
     @property

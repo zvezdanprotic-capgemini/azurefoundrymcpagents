@@ -9,10 +9,10 @@ Recommends suitable insurance products based on customer profile:
 """
 
 from typing import Dict, Any
-from agents.base import BaseKYCAgent
+from agents.base_http import BaseKYCAgentHTTP
 
 
-class RecommendationAgent(BaseKYCAgent):
+class RecommendationAgent(BaseKYCAgentHTTP):
     """Product Recommendation Agent for the KYC workflow."""
     
     @property

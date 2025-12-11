@@ -22,6 +22,7 @@ except ImportError:
     BlobServiceClient = None
 
 from mcp_servers.base import BaseMCPServer, ToolResult, get_env_or_default
+from mcp_servers.http_app import create_mcp_http_app
 
 logger = logging.getLogger("mcp_servers.blob")
 
@@ -271,7 +272,9 @@ class BlobMCPServer(BaseMCPServer):
                 "blob_path": blob_path,
                 "message": "Document not found"
             })
-    
+
+        
+    # FastAPI app exposing HTTP MCP endpoints
     async def _delete_document(self, blob_path: str) -> ToolResult:
         """Delete a document from blob storage."""
         client = self._get_client()
@@ -290,4 +293,10 @@ class BlobMCPServer(BaseMCPServer):
                 "blob_path": blob_path,
                 "message": "Document not found"
             })
+
+
+# FastAPI app exposing HTTP MCP endpoints (defined after class)
+app = create_mcp_http_app(BlobMCPServer())
+
+        # FastAPI app exposing HTTP MCP endpoints
 

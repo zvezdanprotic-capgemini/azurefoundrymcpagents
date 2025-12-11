@@ -9,10 +9,10 @@ Completes the final onboarding steps:
 """
 
 from typing import Dict, Any
-from agents.base import BaseKYCAgent
+from agents.base_http import BaseKYCAgentHTTP
 
 
-class ActionAgent(BaseKYCAgent):
+class ActionAgent(BaseKYCAgentHTTP):
     """Final Action Agent for the KYC workflow."""
     
     @property

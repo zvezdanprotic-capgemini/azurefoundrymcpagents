@@ -1,11 +1,11 @@
 """
-Local KYC Agents Module
+KYC Agents Module
 
-This module contains all the local LangChain-based agents for the KYC workflow.
-These agents replace the previous Azure AI Foundry Agents for better control.
+This module contains all LangChain-based agents for the KYC workflow.
+All agents use HTTP MCP architecture (inherit from BaseKYCAgentHTTP).
 """
 
-from agents.base import BaseKYCAgent
+from agents.base_http import BaseKYCAgentHTTP
 from agents.intake import IntakeAgent
 from agents.verification import VerificationAgent
 from agents.eligibility import EligibilityAgent
@@ -24,7 +24,7 @@ AGENT_REGISTRY = {
 }
 
 __all__ = [
-    "BaseKYCAgent",
+    "BaseKYCAgentHTTP",
     "IntakeAgent",
     "VerificationAgent", 
     "EligibilityAgent",

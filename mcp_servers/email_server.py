@@ -13,6 +13,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from mcp_servers.base import BaseMCPServer, ToolResult, get_env_or_default
+from mcp_servers.http_app import create_mcp_http_app
 
 logger = logging.getLogger("mcp_servers.email")
 
@@ -114,6 +115,7 @@ class EmailMCPServer(BaseMCPServer):
             logger.error(f"Error executing tool {tool_name}: {e}")
             return ToolResult(success=False, error=str(e))
     
+
     async def _send_email(self, to_email: str, subject: str, html_content: str, text_content: str) -> ToolResult:
         """Send email using configured provider (SendGrid or SMTP)."""
         if self._sendgrid_api_key:
@@ -187,7 +189,7 @@ class EmailMCPServer(BaseMCPServer):
             })
         except Exception as e:
             return ToolResult(success=False, error=f"SMTP error: {str(e)}")
-    
+
     async def _send_kyc_approved_email(self, args: Dict[str, Any]) -> ToolResult:
         """Send KYC approval notification."""
         customer_name = args["customer_name"]
@@ -343,3 +345,7 @@ class EmailMCPServer(BaseMCPServer):
         """
         
         return await self._send_email(args["to_email"], subject, html_content, text_content)
+
+
+# FastAPI app exposing HTTP MCP endpoints (defined after class)
+app = create_mcp_http_app(EmailMCPServer())
