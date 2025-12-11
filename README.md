@@ -44,39 +44,39 @@ python test_tool_binding.py  # Verify agents can call tools
 
 ```mermaid
 graph TD
-    FE[React Frontend] --> API[FastAPI Backend main_http.py :8000]
-    
-    subgraph "Main Application"
-        API --> Graph[LangGraph Orchestrator]
-        API --> MCP_CLIENT[MCP Client<br/>langchain-mcp-adapters]
-        
-        Graph --> AGENTS[KYC Agents]
-        AGENTS --> I[IntakeAgent<br/>BaseKYCAgentHTTP]
-        AGENTS --> V[VerificationAgent<br/>BaseKYCAgentHTTP]
-        AGENTS --> E[EligibilityAgent<br/>BaseKYCAgentHTTP]
-        AGENTS --> R[RecommendationAgent<br/>BaseKYCAgentHTTP]
-        AGENTS --> C[ComplianceAgent<br/>BaseKYCAgentHTTP]
-        AGENTS --> A[ActionAgent<br/>BaseKYCAgentHTTP]
-        
-        AGENTS -.->|get_tools| MCP_CLIENT
-    end
-    
-    subgraph "HTTP MCP Servers - FastMCP + Streamable HTTP"
-        MCP_CLIENT -->|HTTP/SSE<br/>:8001/mcp| PG[PostgreSQL MCP Server<br/>6 tools]
-        MCP_CLIENT -->|HTTP/SSE<br/>:8002/mcp| BLOB[Blob Storage MCP Server<br/>5 tools]
-        MCP_CLIENT -->|HTTP/SSE<br/>:8003/mcp| EMAIL[Email MCP Server<br/>4 tools]
-        MCP_CLIENT -->|HTTP/SSE<br/>:8004/mcp| RAG[RAG MCP Server<br/>5 tools]
-    end
-    
-    subgraph "External Systems"
-        PG --> DB[(PostgreSQL + pgvector)]
-        BLOB --> AZ[Azure Blob Storage]
-        RAG --> DB
-        RAG --> AOAI[Azure OpenAI Embeddings]
-        EMAIL --> SMTP[SendGrid/Email Service]
-    end
-    
-    Graph -.->|State Persist| DB
+   FE[React Frontend] --> API[FastAPI Backend main_http.py :8000]
+   
+   subgraph "Main Application"
+      API --> Graph[LangGraph Orchestrator]
+      API --> MCP_CLIENT[MCP Client<br/>langchain-mcp-adapters]
+      
+      Graph --> AGENTS[KYC Agents]
+      AGENTS --> I[IntakeAgent<br/>BaseKYCAgentHTTP]
+      AGENTS --> V[VerificationAgent<br/>BaseKYCAgentHTTP]
+      AGENTS --> E[EligibilityAgent<br/>BaseKYCAgentHTTP]
+      AGENTS --> R[RecommendationAgent<br/>BaseKYCAgentHTTP]
+      AGENTS --> C[ComplianceAgent<br/>BaseKYCAgentHTTP]
+      AGENTS --> A[ActionAgent<br/>BaseKYCAgentHTTP]
+      
+      AGENTS -.->|get_tools| MCP_CLIENT
+   end
+   
+   subgraph "HTTP MCP Servers - FastMCP + Streamable HTTP"
+      MCP_CLIENT -->|HTTP/SSE<br/>:8001/mcp| PG[PostgreSQL MCP Server<br/>6 tools]
+      MCP_CLIENT -->|HTTP/SSE<br/>:8002/mcp| BLOB[Blob Storage MCP Server<br/>5 tools]
+      MCP_CLIENT -->|HTTP/SSE<br/>:8003/mcp| EMAIL[Email MCP Server<br/>4 tools]
+      MCP_CLIENT -->|HTTP/SSE<br/>:8004/mcp| RAG[RAG MCP Server<br/>5 tools]
+   end
+   
+   subgraph "External Systems"
+      PG --> DB[(PostgreSQL + pgvector)]
+      BLOB --> AZ[Azure Blob Storage]
+      RAG --> DB
+      RAG --> AOAI[Azure OpenAI Embeddings]
+      EMAIL --> SMTP[SendGrid/Email Service]
+   end
+   
+   Graph -.->|State Persist| DB
 ```
 
 **Key Architecture Features:**

@@ -11,6 +11,8 @@ import base64
 from datetime import datetime, timedelta
 from typing import Optional
 from dotenv import load_dotenv
+import httpx
+from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
@@ -204,6 +206,110 @@ def delete_document(blob_path: str) -> dict:
         return {"deleted": True, "blob_path": blob_path}
     except ResourceNotFoundError:
         return {"deleted": False, "message": "Document not found"}
+
+
+@mcp.tool()
+def convert_url_to_markdown(url: str, timeout_seconds: int = 30) -> dict:
+    """
+    Download a document from a URL and convert it to markdown if it's a PDF or DOCX.
+    
+    This tool:
+    1. Downloads the document from the provided URL
+    2. Detects the file type based on URL extension or Content-Type header
+    3. Converts PDF/DOCX/DOC files to markdown using docling
+    4. Returns the markdown content and metadata
+    
+    Supported file types:
+    - PDF (.pdf)
+    - Microsoft Word (.docx, .doc)
+    
+    Args:
+        url: The URL of the document to download and convert
+        timeout_seconds: Maximum time to wait for download (default: 30)
+        
+    Returns:
+        Dict with success status, markdown content, file info, and any error messages
+    """
+    from mcp_servers.document_processor import convert_to_markdown
+    
+    try:
+        # Download the document
+        with httpx.Client(timeout=timeout_seconds, follow_redirects=True) as client:
+            response = client.get(url)
+            response.raise_for_status()
+            
+            file_bytes = response.content
+            
+            # Determine filename from URL or Content-Disposition header
+            filename = Path(url).name
+            if "content-disposition" in response.headers:
+                content_disp = response.headers["content-disposition"]
+                if "filename=" in content_disp:
+                    filename = content_disp.split("filename=")[1].strip('"\'')
+            
+            # Get content type
+            content_type = response.headers.get("content-type", "")
+            
+            # Determine file extension
+            ext = Path(filename).suffix.lower()
+            
+            # If no extension, try to infer from content-type
+            if not ext or ext not in ['.pdf', '.docx', '.doc']:
+                if 'pdf' in content_type:
+                    ext = '.pdf'
+                    filename = filename + '.pdf' if not filename.endswith('.pdf') else filename
+                elif 'word' in content_type or 'officedocument' in content_type:
+                    ext = '.docx'
+                    filename = filename + '.docx' if not filename.endswith('.docx') else filename
+            
+            # Check if file type is supported
+            if ext not in ['.pdf', '.docx', '.doc']:
+                return {
+                    "success": False,
+                    "error": f"Unsupported file type: {ext}. Only PDF and Word documents are supported.",
+                    "url": url,
+                    "detected_extension": ext,
+                    "content_type": content_type
+                }
+            
+            # Convert to markdown
+            markdown_content = convert_to_markdown(file_bytes, filename)
+            
+            return {
+                "success": True,
+                "url": url,
+                "filename": filename,
+                "file_type": ext,
+                "content_type": content_type,
+                "file_size_bytes": len(file_bytes),
+                "markdown_length": len(markdown_content),
+                "markdown": markdown_content
+            }
+            
+    except httpx.HTTPStatusError as e:
+        return {
+            "success": False,
+            "error": f"HTTP error: {e.response.status_code} - {e.response.reason_phrase}",
+            "url": url
+        }
+    except httpx.RequestError as e:
+        return {
+            "success": False,
+            "error": f"Request error: {str(e)}",
+            "url": url
+        }
+    except ValueError as e:
+        return {
+            "success": False,
+            "error": f"Conversion error: {str(e)}",
+            "url": url
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Unexpected error: {str(e)}",
+            "url": url
+        }
 
 
 if __name__ == "__main__":
